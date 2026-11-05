@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build Your First AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: a workshop handout. One column, numbered sections 01-06, one live demo in the middle. */
+  /* Color carries meaning: indigo = the agent thinks, orange = it acts, green = it sees the result. */
+  --paper: #EFEFEC;
+  --panel: #FFFFFF;
+  --ink: #15161A;
+  --muted: #5B5E66;
+  --line: #D5D5CF;
+  --think: #4346DC;
+  --act: #D94F08;
+  --see: #087A51;
+  --str: #8A5300;
+  --term: #15161A;
+  --term-ink: #E9E9E4;
+  --term-muted: #8E919A;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111215; --panel: #1A1B20; --ink: #ECECE7; --muted: #A2A5AD; --line: #2E3038;
+    --think: #9396FF; --act: #FF8C4D; --see: #42CC92; --str: #E3B566;
+    --term: #0B0C0E; --term-ink: #E9E9E4; --term-muted: #8E919A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111215; --panel: #1A1B20; --ink: #ECECE7; --muted: #A2A5AD; --line: #2E3038;
+  --think: #9396FF; --act: #FF8C4D; --see: #42CC92; --str: #E3B566;
+  --term: #0B0C0E; --term-ink: #E9E9E4; --term-muted: #8E919A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--body); font-size: 18px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--act); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 112%; line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+p { margin: 0; }
+code, pre, .mono { font-family: var(--mono); }
+
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- top bar ---------- */
+.top {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+}
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 56px; }
+.brand { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 15px; letter-spacing: 0.02em; text-transform: uppercase; }
+.brand span { color: var(--muted); font-weight: 500; }
+.nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.nav a { text-decoration: none; font-size: 14px; color: var(--muted); padding: 6px 10px; border-radius: 6px; }
+.nav a:hover { color: var(--ink); background: var(--panel); }
+
+/* ---------- hero ---------- */
+.hero { padding: 64px 0 56px; }
+.eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.hero h1 { font-size: clamp(44px, 7.4vw, 96px); font-weight: 850; margin-top: 18px; }
+.hero h1 .a { color: var(--act); }
+.lede { font-size: clamp(19px, 2vw, 23px); max-width: 40ch; margin-top: 22px; color: var(--ink); }
+.lede b { font-weight: 600; }
+
+.versus { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 44px; }
+.vcard { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 14px; }
+.vhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.vhead h3 { font-size: 24px; font-weight: 800; }
+.vhead .eyebrow { font-size: 12px; }
+.ask { font-size: 16px; color: var(--muted); }
+.ask b { color: var(--ink); font-weight: 600; }
+.bubble { background: var(--paper); border-radius: 12px; padding: 14px 16px; font-size: 16px; }
+.bubble ol { margin: 8px 0 0; padding-left: 20px; }
+.mini-log { list-style: none; margin: 0; padding: 14px 16px; background: var(--term); color: var(--term-ink); border-radius: 12px; font-family: var(--mono); font-size: 13.5px; display: grid; gap: 6px; }
+.mini-log li { display: grid; grid-template-columns: 56px 1fr; gap: 8px; }
+.verdict { font-weight: 600; font-size: 16px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.verdict.bad { color: var(--muted); }
+.verdict.good { color: var(--see); }
+
+/* ---------- tags (shared) ---------- */
+.tag { font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.t-think { color: var(--think); }
+.t-act { color: var(--act); }
+.t-see { color: var(--see); }
+.mini-log .t-think { color: #A9ABFF; } .mini-log .t-act { color: #FF9A5E; } .mini-log .t-see { color: #5ED9A4; }
+
+/* ---------- sections ---------- */
+section.block { padding: 72px 0; border-top: 1px solid var(--line); }
+.shead { display: grid; grid-template-columns: 80px 1fr; gap: 8px 20px; align-items: baseline; margin-bottom: 36px; }
+.num { font-family: var(--mono); font-size: 15px; color: var(--muted); }
+.shead h2 { font-size: clamp(32px, 4.4vw, 54px); font-weight: 820; }
+.shead p { grid-column: 2; font-size: 19px; color: var(--muted); max-width: 60ch; }
+
+/* ---------- recipe ---------- */
+.recipe { display: grid; grid-template-columns: 1.25fr 1fr; gap: 28px; align-items: center; }
+.parts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.part { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 8px; align-content: start; }
+.part h3 { font-size: 26px; font-weight: 820; }
+.part p { font-size: 16px; color: var(--muted); }
+.part code { font-size: 13px; background: var(--paper); padding: 6px 8px; border-radius: 6px; overflow-wrap: anywhere; }
+.part .k { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.loop-fig { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.loop-fig svg { width: 100%; height: auto; display: block; }
+.loop-fig figcaption { font-size: 15px; color: var(--muted); padding: 4px 8px 6px; }
+.ring { fill: none; stroke: var(--line); stroke-width: 3; }
+.node-think { fill: var(--think); } .node-act { fill: var(--act); } .node-see { fill: var(--see); }
+.node-label { fill: #fff; font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 15px; letter-spacing: 0.04em; }
+.arrow { fill: var(--muted); }
+.svg-muted { fill: var(--muted); font-family: var(--body); font-size: 14px; }
+.svg-ink { fill: var(--ink); font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 14px; }
+.exit-line { stroke: var(--ink); stroke-width: 2; }
+.exit-box { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
+.loop-dot { fill: var(--ink); }
+
+/* ---------- demo ---------- */
+.demo { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; }
+.window { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.wbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 14px; }
+.wbar .dots { display: flex; gap: 6px; } .wbar .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: block; }
+.wbar .path { color: var(--muted); }
+.wbody { padding: 16px; display: grid; gap: 14px; }
+.zone-label { font-family: var(--mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.loose { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-height: 226px; align-content: start; position: relative; }
+.loose.scan .file { animation: scan 0.9s ease; }
+@keyframes scan { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 40% { box-shadow: 0 0 0 3px var(--act); } }
+.empty-note { grid-column: 1 / -1; display: none; place-items: center; min-height: 226px; border: 2px dashed var(--line); border-radius: 10px; color: var(--see); font-weight: 600; }
+.loose.done .empty-note { display: grid; }
+.file { display: flex; align-items: center; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font-family: var(--mono); font-size: 13px; min-width: 0; will-change: transform; }
+.file .ext { flex: none; font-size: 10px; font-weight: 600; letter-spacing: 0.04em; padding: 3px 5px; border-radius: 4px; background: var(--ink); color: var(--paper); min-width: 38px; text-align: center; }
+.file .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folders { display: grid; gap: 6px; }
+.folder { border: 2px dashed var(--line); border-radius: 10px; padding: 6px 8px; display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 42px; transition: border-color .3s, background-color .3s; }
+.folder.on { border-style: solid; border-color: var(--ink); background: var(--paper); }
+.fhead { display: flex; justify-content: space-between; gap: 6px; padding-right: 8px; border-right: 1px solid var(--line); font-family: var(--display); font-stretch: 105%; font-weight: 750; font-size: 14px; }
+.fhead .count { font-family: var(--mono); font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.folder:not(.on) .fhead { color: var(--muted); }
+.flist { display: flex; flex-wrap: wrap; gap: 5px; }
+.flist .file { padding: 3px 7px; font-size: 12px; gap: 0; }
+.flist .file .ext { display: none; }
+
+.console { background: var(--term); color: var(--term-ink); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; min-height: 430px; }
+.console .wbar { border-color: #2A2C33; color: var(--term-muted); }
+.console .wbar .dots i { background: #34363E; }
+.log { list-style: none; margin: 0; padding: 14px 16px; overflow-y: auto; max-height: 470px; flex: 1; display: flex; flex-direction: column; gap: 9px; font-size: 15px; }
+.log li { display: grid; grid-template-columns: 62px 1fr; gap: 10px; animation: rise .35s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.log .tag { padding-top: 3px; }
+.log .t-think { color: #A9ABFF; } .log .t-act { color: #FF9A5E; } .log .t-see { color: #5ED9A4; } .log .t-goal, .log .t-done { color: #fff; }
+.log .msg { min-width: 0; overflow-wrap: anywhere; }
+.log .msg.code { font-family: var(--mono); font-size: 13.5px; }
+.log .msg small { display: block; color: var(--term-muted); font-size: 12.5px; line-height: 1.6; }
+.log li.round { display: block; font-family: var(--mono); font-size: 12px; color: var(--term-muted); border-top: 1px solid #2A2C33; padding-top: 8px; margin-top: 4px; letter-spacing: 0.06em; text-transform: uppercase; }
+.log li.done .msg { background: #232530; padding: 8px 10px; border-radius: 8px; }
+
+.stage { grid-column: 1 / -1; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: grid; grid-template-columns: 1fr auto; gap: 18px 24px; align-items: center; }
+.narr { font-size: clamp(19px, 2vw, 23px); line-height: 1.45; min-height: 3em; max-width: 62ch; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; grid-column: 1 / -1; }
+.chip { font-family: var(--mono); font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.chip b { font-weight: 600; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+button { font: inherit; cursor: pointer; }
+.btn { font-family: var(--display); font-stretch: 108%; font-weight: 750; font-size: 16px; border-radius: 10px; padding: 11px 18px; border: 2px solid var(--ink); background: var(--panel); color: var(--ink); }
+.btn:hover { background: var(--paper); }
+.btn.primary { background: var(--ink); color: var(--paper); }
+.btn.primary:hover { background: var(--act); border-color: var(--act); color: #fff; }
+.btn:disabled { opacity: .4; cursor: default; background: var(--panel); color: var(--ink); border-color: var(--ink); }
+.hint { font-size: 13px; color: var(--muted); grid-column: 1 / -1; }
+kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; background: var(--paper); }
+
+/* ---------- code ---------- */
+.code-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.code-top p { color: var(--muted); font-size: 16px; }
+.cpart { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 22px; padding: 22px 0; border-top: 1px dashed var(--line); }
+.cpart:first-of-type { border-top: 0; }
+.cexp { display: grid; gap: 8px; align-content: start; }
+.cexp .num { font-size: 13px; }
+.cexp h3 { font-size: 24px; font-weight: 820; }
+.cexp p { font-size: 16px; color: var(--muted); }
+pre.code { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; tab-size: 4; }
+.code .c { color: var(--muted); font-style: italic; }
+.code .s { color: var(--str); }
+.code .k { color: var(--think); font-weight: 600; }
+.code .n { color: var(--act); }
+.code .f { color: var(--see); font-weight: 600; }
+
+/* ---------- run ---------- */
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.step h3 { font-size: 21px; font-weight: 800; }
+.step p { font-size: 15.5px; color: var(--muted); }
+.cmd { display: flex; align-items: center; gap: 8px; background: var(--term); color: var(--term-ink); border-radius: 8px; padding: 8px 8px 8px 12px; font-family: var(--mono); font-size: 13px; }
+.cmd code { flex: 1; overflow-x: auto; white-space: nowrap; }
+.cmd .os { color: var(--term-muted); font-size: 11px; flex: none; }
+.copy { flex: none; font-family: var(--mono); font-size: 12px; border: 1px solid #3A3C45; background: transparent; color: var(--term-ink); border-radius: 6px; padding: 4px 8px; }
+.copy:hover { background: #2A2C33; }
+.copy.light { border-color: var(--ink); color: var(--ink); font-size: 14px; padding: 9px 14px; border-width: 2px; font-family: var(--display); font-stretch: 108%; font-weight: 750; border-radius: 10px; }
+.copy.light:hover { background: var(--ink); color: var(--paper); }
+.note { margin-top: 18px; font-size: 16px; color: var(--muted); max-width: 70ch; }
+.note code { font-size: 14px; color: var(--ink); }
+.term-out { margin-top: 22px; }
+.term-out pre { margin: 0; background: var(--term); color: var(--term-ink); border-radius: 12px; padding: 18px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; }
+.term-out .lbl { font-family: var(--mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.term-out .t-think { color: #A9ABFF; } .term-out .t-act { color: #FF9A5E; } .term-out .t-see { color: #5ED9A4; } .term-out .dim { color: var(--term-muted); }
+
+/* ---------- rules + your turn ---------- */
+.rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: r; }
+.rule { border-top: 3px solid var(--ink); padding-top: 14px; display: grid; gap: 8px; align-content: start; }
+.rule h3 { font-size: 22px; font-weight: 800; }
+.rule p { font-size: 16px; color: var(--muted); }
+.rule code { font-size: 13px; color: var(--ink); }
+.tasks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.task { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 10px; align-content: start; }
+.level { justify-self: start; font-family: var(--mono); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 9px; border-radius: 999px; border: 1.5px solid currentColor; }
+.lv1 { color: var(--see); } .lv2 { color: var(--think); } .lv3 { color: var(--act); }
+.task h3 { font-size: 22px; font-weight: 800; }
+.task p { font-size: 16px; color: var(--muted); }
+.task code { font-size: 13px; color: var(--ink); }
+
+footer { border-top: 1px solid var(--line); padding: 64px 0 48px; }
+.formula { font-family: var(--display); font-stretch: 118%; font-weight: 850; font-size: clamp(28px, 4.6vw, 58px); line-height: 1.1; text-wrap: balance; }
+.formula .op { color: var(--muted); font-weight: 400; }
+.sign { margin-top: 24px; font-size: 14px; color: var(--muted); }
+
+/* ---------- daily tasks ---------- */
+.sub { font-size: clamp(24px, 2.6vw, 30px); font-weight: 820; margin-bottom: 14px; }
+.sub.gap { margin-top: 56px; }
+.sub.practice { margin: 56px 0 16px; }
+.aside { font-size: 16.5px; color: var(--muted); max-width: 72ch; margin-top: 18px; }
+.aside.top { margin: -4px 0 18px; }
+.triggers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.trig { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.tk { font-family: var(--display); font-stretch: 112%; font-weight: 820; font-size: 20px; }
+.trig p { font-size: 15.5px; color: var(--muted); }
+.trig code { font-size: 12.5px; background: var(--paper); padding: 5px 7px; border-radius: 6px; }
+.builder { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 18px; align-items: start; }
+.picker { display: grid; gap: 8px; }
+.pick { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; display: grid; gap: 2px; color: var(--ink); }
+.pick:hover { border-color: var(--ink); }
+.pick b { font-family: var(--display); font-stretch: 108%; font-weight: 780; font-size: 17px; }
+.pick span { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+.pick[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.pick[aria-pressed="true"] span { color: color-mix(in srgb, var(--paper) 72%, transparent); }
+.spec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 14px; }
+.spec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.spec-head h3 { font-size: 30px; font-weight: 830; }
+.tchip { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; border: 1.5px solid var(--ink); border-radius: 999px; padding: 3px 10px; }
+.rows { margin: 0; display: grid; }
+.rows > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+.rows dt { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding-top: 4px; }
+.rows dd { margin: 0; font-size: 17px; }
+.tool { display: inline-block; font-family: var(--mono); font-size: 13px; padding: 2px 8px; border-radius: 6px; margin: 0 6px 4px 0; border: 1.5px solid currentColor; }
+.tool.r { color: var(--see); } .tool.w { color: var(--act); }
+pre.code.wrapc, #skel { white-space: pre-wrap; overflow-wrap: anywhere; }
+.spec-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legend { font-size: 14px; color: var(--muted); }
+
+/* ---------- agent or not ---------- */
+.decide { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.presets .zone-label { margin-right: 4px; }
+.preset { font-size: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 6px 12px; }
+.preset:hover { border-color: var(--ink); }
+.preset[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.q { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
+.q p { font-size: 18px; font-weight: 500; }
+.q small { display: block; color: var(--muted); font-size: 14.5px; font-weight: 400; }
+.yn { display: flex; flex: none; border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; }
+.yn button { border: 0; background: var(--panel); color: var(--ink); padding: 8px 18px; font-family: var(--display); font-stretch: 108%; font-weight: 750; font-size: 15px; }
+.yn button + button { border-left: 2px solid var(--ink); }
+.yn button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.vcard2 { background: var(--panel); border: 1px solid var(--line); border-left: 10px solid var(--muted); border-radius: 14px; padding: 24px; display: grid; gap: 10px; position: sticky; top: 76px; }
+.vcard2.v-build { border-left-color: var(--see); }
+.vcard2.v-approve { border-left-color: var(--act); }
+.vcard2.v-script { border-left-color: var(--ink); }
+.vcard2 h3 { font-size: clamp(26px, 3vw, 36px); font-weight: 840; }
+.vcard2 p { font-size: 17px; color: var(--muted); }
+
+/* ---------- canvas ---------- */
+.canvas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+.cform { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 6px; }
+.cform label { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-top: 8px; }
+.cform input, .cform select, .cform textarea { font: inherit; font-size: 16px; color: var(--ink); background: var(--paper); border: 1.5px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100%; }
+.cform input:focus, .cform select:focus, .cform textarea:focus { border-color: var(--ink); }
+.cform textarea { resize: vertical; min-height: 84px; }
+.inline { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 8px; }
+.form-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.cprev { display: grid; gap: 10px; position: sticky; top: 76px; }
+.code-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+#skel { max-height: 680px; overflow-y: auto; }
+.formula-2 { margin-top: 12px; font-size: clamp(18px, 2vw, 22px); color: var(--muted); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 980px) {
+  .recipe, .demo { grid-template-columns: 1fr; }
+  .rules { grid-template-columns: 1fr 1fr; }
+  .cpart { grid-template-columns: 1fr; gap: 12px; }
+  .builder, .decide, .canvas { grid-template-columns: 1fr; }
+  .triggers { grid-template-columns: 1fr 1fr; }
+  .vcard2, .cprev { position: static; }
+}
+@media (max-width: 760px) {
+  body { font-size: 17px; }
+  .nav { display: none; }
+  .versus, .steps, .tasks, .parts { grid-template-columns: 1fr; }
+  .stage { grid-template-columns: 1fr; }
+  .controls { justify-content: flex-start; }
+  .shead { grid-template-columns: 1fr; }
+  .shead p { grid-column: 1; }
+  .q { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 440px) {
+  .wrap { padding: 0 16px; }
+  .loose { grid-template-columns: 1fr; }
+  .folder { grid-template-columns: 1fr; }
+  .fhead { border-right: 0; }
+  .rules { grid-template-columns: 1fr; }
+  .triggers { grid-template-columns: 1fr; }
+  .rows > div, .inline { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .loop-dot { display: none; }
+  .log li, .loose.scan .file { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">AI Agents <span>· workshop</span></div>
+    <nav class="nav" aria-label="Sections">
+      <a href="#recipe">Recipe</a>
+      <a href="#demo">Demo</a>
+      <a href="#code">Code</a>
+      <a href="#run">Run it</a>
+      <a href="#any-task">Daily tasks</a>
+      <a href="#decide">Agent or not?</a>
+      <a href="#rules">Rules</a>
+      <a href="#your-turn">Your turn</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="idea">
+    <div class="wrap">
+      <p class="eyebrow">Workshop · Build an AI agent in one Python file</p>
+      <h1>A chatbot talks.<br><span class="a">An agent acts.</span></h1>
+      <p class="lede">Today we build <b>Tidy</b>, a small agent that cleans a messy Downloads folder. One file, two tools, one loop. Then you use the same recipe for your own daily tasks.</p>
+
+      <div class="versus">
+        <article class="vcard">
+          <div class="vhead"><h3>Chatbot</h3><span class="eyebrow">answers</span></div>
+          <p class="ask">You ask: <b>“Clean my Downloads folder.”</b></p>
+          <div class="bubble">Sure! Here is how to do it:
+            <ol>
+              <li>Create folders called Images, Documents, Audio…</li>
+              <li>Drag each file into the right folder.</li>
+              <li>Check that nothing is left.</li>
+            </ol>
+          </div>
+          <p class="verdict bad">Result: you still have 10 files to move yourself.</p>
+        </article>
+        <article class="vcard">
+          <div class="vhead"><h3>Agent</h3><span class="eyebrow">does the job</span></div>
+          <p class="ask">You ask: <b>“Clean my Downloads folder.”</b></p>
+          <ul class="mini-log" aria-label="Agent activity">
+            <li><span class="tag t-act">act</span><span>list_files()</span></li>
+            <li><span class="tag t-see">see</span><span>10 loose files</span></li>
+            <li><span class="tag t-act">act</span><span>move_file() × 10</span></li>
+            <li><span class="tag t-act">act</span><span>list_files()</span></li>
+            <li><span class="tag t-see">see</span><span>nothing left</span></li>
+          </ul>
+          <p class="verdict good">Result: the folder is clean. You did nothing.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="recipe">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">01</span>
+        <h2>The recipe: four parts</h2>
+        <p>Every agent, small or huge, is built from the same four parts. Tidy uses the simplest version of each.</p>
+      </div>
+      <div class="recipe">
+        <div class="parts">
+          <div class="part">
+            <span class="k">1</span>
+            <h3>Goal</h3>
+            <p>What you want, in plain English.</p>
+            <code>GOAL = "Clean up my Downloads folder…"</code>
+          </div>
+          <div class="part">
+            <span class="k">2</span>
+            <h3>Model</h3>
+            <p>The brain. It reads the goal and decides the next move.</p>
+            <code>MODEL = "claude-opus-5-5"</code>
+          </div>
+          <div class="part">
+            <span class="k">3</span>
+            <h3>Tools</h3>
+            <p>The hands. Normal Python functions the model is allowed to ask for.</p>
+            <code>list_files()  ·  move_file()</code>
+          </div>
+          <div class="part">
+            <span class="k">4</span>
+            <h3>Loop</h3>
+            <p>Repeat think, act, see until the goal is done.</p>
+            <code>for round_number in range(1, 16):</code>
+          </div>
+        </div>
+        <figure class="loop-fig" style="margin:0">
+          <svg viewBox="0 0 410 300" role="img" aria-label="The agent loop: think, act, see, repeated until the goal is done, then answer.">
+            <circle class="ring" cx="170" cy="150" r="105"/>
+            <polygon class="arrow" points="-7,-7 7,0 -7,7" transform="translate(261 97.5) rotate(60)"/>
+            <polygon class="arrow" points="-7,-7 7,0 -7,7" transform="translate(170 255) rotate(180)"/>
+            <polygon class="arrow" points="-7,-7 7,0 -7,7" transform="translate(79 97.5) rotate(300)"/>
+            <circle class="loop-dot" r="6">
+              <animateMotion dur="6s" repeatCount="indefinite" path="M170,45 A105,105 0 1,1 169.9,45"/>
+            </circle>
+            <text class="svg-muted" x="170" y="145" text-anchor="middle">repeat until</text>
+            <text class="svg-muted" x="170" y="165" text-anchor="middle">the goal is done</text>
+            <line class="exit-line" x1="206" y1="45" x2="292" y2="45"/>
+            <polygon fill="currentColor" class="arrow" points="-7,-6 5,0 -7,6" transform="translate(296 45)"/>
+            <text class="svg-muted" x="250" y="34" text-anchor="middle" font-size="12">no tool needed</text>
+            <rect class="exit-box" x="304" y="26" width="96" height="38" rx="8"/>
+            <text class="svg-ink" x="352" y="50" text-anchor="middle">ANSWER</text>
+            <circle class="node-think" cx="170" cy="45" r="36"/>
+            <text class="node-label" x="170" y="50" text-anchor="middle">THINK</text>
+            <circle class="node-act" cx="261" cy="202" r="36"/>
+            <text class="node-label" x="261" y="207" text-anchor="middle">ACT</text>
+            <circle class="node-see" cx="79" cy="202" r="36"/>
+            <text class="node-label" x="79" y="207" text-anchor="middle">SEE</text>
+          </svg>
+          <figcaption>Indigo = the model thinks. Orange = a tool runs. Green = the result comes back. The same colors are used everywhere on this page.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="demo">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">02</span>
+        <h2>Watch Tidy work, step by step</h2>
+        <p>This is a replay of a real run of the code below. Press <b>Next step</b> and read the line under the screens.</p>
+      </div>
+
+      <div class="demo">
+        <div class="window" aria-label="The my_downloads folder">
+          <div class="wbar"><span class="dots"><i></i><i></i><i></i></span><span class="path">~/</span>my_downloads/</div>
+          <div class="wbody">
+            <div class="zone-label">Loose files</div>
+            <div class="loose" id="loose"><div class="empty-note">No loose files left</div></div>
+            <div class="zone-label">Sub-folders</div>
+            <div class="folders" id="folders"></div>
+          </div>
+        </div>
+
+        <div class="console" aria-label="Agent log">
+          <div class="wbar"><span class="dots"><i></i><i></i><i></i></span>python agent.py</div>
+          <ol class="log" id="log" aria-live="polite"></ol>
+        </div>
+
+        <div class="stage">
+          <p class="narr" id="narr"></p>
+          <div class="controls">
+            <button class="btn" id="reset" type="button">Reset</button>
+            <button class="btn" id="play" type="button">Play all</button>
+            <button class="btn primary" id="next" type="button">Next step →</button>
+          </div>
+          <div class="chips">
+            <span class="chip">Step <b id="c-step">0</b> / 9</span>
+            <span class="chip">Round <b id="c-round">–</b></span>
+            <span class="chip">Tool calls <b id="c-tools">0</b></span>
+            <span class="chip">Files sorted <b id="c-sorted">0</b> / 10</span>
+          </div>
+          <p class="hint">Keyboard: <kbd>→</kbd> next step · <kbd>R</kbd> reset</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="code">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">03</span>
+        <h2>The code, part by part</h2>
+        <p>The whole agent is one Python file. Read the left column first, then the code.</p>
+      </div>
+      <div class="code-top">
+        <p>File: <code>agent.py</code> · Python 3.10 or newer · library: <code>anthropic</code></p>
+        <button class="copy light" type="button" id="copy-all">Copy agent.py</button>
+      </div>
+      <div id="code-parts"></div>
+    </div>
+  </section>
+
+  <section class="block" id="run">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">04</span>
+        <h2>Run it on your laptop</h2>
+        <p>Save the code as <code>agent.py</code>, open a terminal in the same folder, then do these three steps.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h3>1. Install the library</h3>
+          <p>One time only.</p>
+          <div class="cmd"><code>pip install anthropic</code><button class="copy" type="button">Copy</button></div>
+        </div>
+        <div class="step">
+          <h3>2. Add your API key</h3>
+          <p>Create a key at <a href="https://platform.claude.com">platform.claude.com</a>. Never paste it inside the code.</p>
+          <div class="cmd"><span class="os">mac</span><code>export ANTHROPIC_API_KEY="sk-ant-..."</code><button class="copy" type="button">Copy</button></div>
+          <div class="cmd"><span class="os">win</span><code>$env:ANTHROPIC_API_KEY="sk-ant-..."</code><button class="copy" type="button">Copy</button></div>
+        </div>
+        <div class="step">
+          <h3>3. Run the agent</h3>
+          <p>The first run creates <code>my_downloads</code> with 10 demo files, then sorts them.</p>
+          <div class="cmd"><code>python agent.py</code><button class="copy" type="button">Copy</button></div>
+        </div>
+      </div>
+      <p class="note">Each run is paid per token on your Anthropic account. For a cheaper run, change <code>MODEL</code> to <code>"claude-haiku-5-5"</code>. To start again with a messy folder, delete <code>my_downloads</code> and run again.</p>
+
+      <div class="term-out">
+        <div class="lbl">Example output · the wording changes on every run</div>
+<pre><span class="dim">--- Round 1 ---</span>
+<span class="t-think">[THINK]</span> I need to see what is in the folder before I sort anything.
+<span class="t-act">[ACT]</span>   list_files({})
+<span class="t-see">[SEE]</span>   beirut_sunset.jpg
+budget_november.xlsx
+cv_2026.pdf
+<span class="dim">…7 more files</span>
+
+<span class="dim">--- Round 2 ---</span>
+<span class="t-think">[THINK]</span> Sort by extension: images, documents, audio, video, other.
+<span class="t-act">[ACT]</span>   move_file({'filename': 'beirut_sunset.jpg', 'folder': 'Images'})
+<span class="t-see">[SEE]</span>   Moved beirut_sunset.jpg -> Images/
+<span class="dim">…9 more moves</span>
+
+<span class="dim">--- Round 3 ---</span>
+<span class="t-act">[ACT]</span>   list_files({})
+<span class="t-see">[SEE]</span>   (no loose files left)
+
+<span class="dim">--- Round 4 ---</span>
+[AGENT] Sorted 10 files into 5 folders.
+Images 2, Documents 4, Audio 2, Videos 1, Other 1.
+Nothing was deleted.
+
+Stopped after 4 rounds. Reason: end_turn</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="any-task">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">05</span>
+        <h2>Same loop, any daily task</h2>
+        <p>Tidy is the training example. For a real daily task you change three things: what starts the agent, its goal and its tools. The loop stays exactly the same.</p>
+      </div>
+
+      <h3 class="sub">An agent is not always a chat</h3>
+      <p class="aside top">A fifth part makes an agent useful every day: the trigger, the thing that starts it. A chat message is only one of four.</p>
+      <div class="triggers">
+        <div class="trig"><span class="tk">Message</span><p>You send it something: a text, a photo of a receipt, a voice note.</p><code>a Telegram bot receives it</code></div>
+        <div class="trig"><span class="tk">Schedule</span><p>It wakes up on its own, every morning at 8 or every Sunday night.</p><code>cron (Mac, Linux) · Task Scheduler (Windows)</code></div>
+        <div class="trig"><span class="tk">Event</span><p>Something happens: a new email, a new file, a form is sent.</p><code>check every 5 minutes, or a webhook</code></div>
+        <div class="trig"><span class="tk">Button</span><p>You click once or type one command, and it does the whole job.</p><code>python agent.py</code></div>
+      </div>
+      <p class="aside">The most useful daily agents never chat. They wake up, do the job and leave the result where you already look: a sheet, your calendar, a draft, a notification. No code? n8n, Make and Zapier each have an AI agent block built from the same parts.</p>
+
+      <h3 class="sub gap">Six agents for daily life</h3>
+      <div class="builder">
+        <div class="picker" id="picker" aria-label="Example agents"></div>
+        <div class="spec" id="spec" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="decide">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">06</span>
+        <h2>Agent, script or chatbot?</h2>
+        <p>Not every task needs an agent. Answer four questions before you build anything. Try the examples first, then your own task.</p>
+      </div>
+      <div class="decide">
+        <div class="qs">
+          <div class="presets" id="presets"><span class="zone-label">Examples</span></div>
+          <div class="q"><p>Does it repeat?<small>Every day, every week, every month.</small></p><div class="yn" data-q="0"><button type="button">Yes</button><button type="button">No</button></div></div>
+          <div class="q"><p>Does it need judgment?<small>Reading, understanding, choosing, writing.</small></p><div class="yn" data-q="1"><button type="button">Yes</button><button type="button">No</button></div></div>
+          <div class="q"><p>Can you give it the tools?<small>Email, calendar, files, web, a sheet, an app with an API.</small></p><div class="yn" data-q="2"><button type="button">Yes</button><button type="button">No</button></div></div>
+          <div class="q"><p>Is a mistake easy to undo?<small>A wrong label is easy. A wrong payment is not.</small></p><div class="yn" data-q="3"><button type="button">Yes</button><button type="button">No</button></div></div>
+        </div>
+        <div class="vcard2" id="verdict" aria-live="polite"></div>
+      </div>
+      <p class="aside">About Tidy: sorting by file extension is a fixed rule, so a ten-line script could do the same job. We used it because you can watch every step. An agent earns its place when the job needs reading and judgment, for example “put each PDF in the folder of its course”.</p>
+    </div>
+  </section>
+
+  <section class="block" id="rules">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">07</span>
+        <h2>Four rules for a safe agent</h2>
+        <p>An agent acts on real things. These four choices in the code keep it under control.</p>
+      </div>
+      <div class="rules">
+        <div class="rule">
+          <h3>Few tools</h3>
+          <p>Two tools are enough for this job. Every extra tool is one more way to make a mistake.</p>
+        </div>
+        <div class="rule">
+          <h3>A fence</h3>
+          <p>The tools only work inside <code>my_downloads</code>. A name with <code>/</code> or <code>..</code> is refused.</p>
+        </div>
+        <div class="rule">
+          <h3>A stop</h3>
+          <p><code>MAX_ROUNDS = 15</code>. If the agent gets stuck, the loop ends anyway.</p>
+        </div>
+        <div class="rule">
+          <h3>A human says yes</h3>
+          <p>Tidy has no delete tool, so it cannot delete. In general the agent prepares, and a human approves anything that sends, pays or deletes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="your-turn">
+    <div class="wrap">
+      <div class="shead">
+        <span class="num">08</span>
+        <h2>Your turn: design your own agent</h2>
+        <p>Pick one task from your week and fill the card. The start of your agent.py writes itself on the right. The loop is the one you already have.</p>
+      </div>
+      <div class="canvas">
+        <form class="cform" id="cform" autocomplete="off">
+          <label for="f-name">Agent name</label>
+          <input id="f-name" type="text">
+          <label for="f-trig">Starts with</label>
+          <div class="inline">
+            <select id="f-trig"><option>Message</option><option>Schedule</option><option>Event</option><option>Button</option></select>
+            <input id="f-when" type="text" aria-label="Starts when, in detail">
+          </div>
+          <label for="f-goal">Goal, in one or two sentences</label>
+          <textarea id="f-goal" rows="3"></textarea>
+          <label for="f-done">Done when</label>
+          <input id="f-done" type="text">
+          <label for="f-reads">Reads: tools that only look (comma between them)</label>
+          <input id="f-reads" type="text">
+          <label for="f-changes">Changes: tools that act</label>
+          <input id="f-changes" type="text">
+          <label for="f-ok">Needs my OK before</label>
+          <input id="f-ok" type="text">
+          <label for="f-lands">Result lands in</label>
+          <input id="f-lands" type="text">
+          <div class="form-actions">
+            <button type="button" class="btn" id="f-example">Load example</button>
+            <button type="button" class="btn" id="f-clear">Clear the card</button>
+          </div>
+        </form>
+        <div class="cprev">
+          <div class="code-head"><span class="zone-label">Your agent.py starts like this</span><button class="copy light" type="button" id="f-copy">Copy plan + code</button></div>
+          <pre class="code" id="skel"></pre>
+        </div>
+      </div>
+      <h3 class="sub practice">Practice on Tidy first</h3>
+      <div class="tasks">
+        <div class="task">
+          <span class="level lv1">Easy · change 1 sentence</span>
+          <h3>A new folder</h3>
+          <p>Edit <code>GOAL</code> so spreadsheets (<code>.xlsx</code>) go to a folder called <code>Spreadsheets</code>. Delete <code>my_downloads</code> and run again.</p>
+        </div>
+        <div class="task">
+          <span class="level lv2">Medium · add 1 tool</span>
+          <h3>Rename files</h3>
+          <p>Write <code>rename_file(old, new)</code>, add it to <code>TOOLS</code> and <code>run_tool</code>. Goal: put today's date at the start of every screenshot name.</p>
+        </div>
+        <div class="task">
+          <span class="level lv3">Hard · a new agent</span>
+          <h3>Note summarizer</h3>
+          <p>Keep the loop. Replace the tools with <code>read_file</code> and <code>write_file</code>. Goal: read every <code>.txt</code> note and write one <code>summary.md</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="formula">Agent <span class="op">=</span> Goal <span class="op">+</span> Model <span class="op">+</span> Tools <span class="op">+</span> Loop</p>
+    <p class="formula-2">Add a trigger and it works for you every day, without a chat.</p>
+    <p class="sign">AI workshop by Mazen Chaban · 2026</p>
+  </div>
+</footer>
+
+<script type="text/plain" id="agent-src">"""
+Tidy: a small AI agent that cleans a messy Downloads folder.
+
+Run it:
+    pip install anthropic
+    export ANTHROPIC_API_KEY="your-key"      (Windows: $env:ANTHROPIC_API_KEY="your-key")
+    python agent.py
+"""
+import os
+import shutil
+
+import anthropic
+
+# ---------- 0. SETTINGS ----------
+FOLDER = "my_downloads"      # the ONLY folder the agent can touch
+MODEL = "claude-opus-5-5"    # the brain
+MAX_ROUNDS = 15              # safety stop: never loop forever
+
+
+# ---------- 1. THE TOOLS (the agent's hands) ----------
+def list_files():
+    """Return the files that are still loose in the folder."""
+    files = [
+        name for name in os.listdir(FOLDER)
+        if os.path.isfile(os.path.join(FOLDER, name)) and not name.startswith(".")
+    ]
+    return "\n".join(sorted(files)) or "(no loose files left)"
+
+
+def move_file(filename, folder):
+    """Move one file into a sub-folder. Create the sub-folder if needed."""
+    for name in (filename, folder):
+        if "/" in name or "\\" in name or ".." in name:
+            return "Refused: use simple names, no paths."
+    source = os.path.join(FOLDER, filename)
+    if not os.path.isfile(source):
+        return f"Error: {filename} does not exist."
+    os.makedirs(os.path.join(FOLDER, folder), exist_ok=True)
+    shutil.move(source, os.path.join(FOLDER, folder, filename))
+    return f"Moved {filename} -> {folder}/"
+
+
+# ---------- 2. THE TOOL MENU (what the model reads) ----------
+TOOLS = [
+    {
+        "name": "list_files",
+        "description": "List the files that are still loose in the Downloads folder.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "move_file",
+        "description": "Move one file into a sub-folder. The sub-folder is created if needed.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {"type": "string", "description": "Exact file name, e.g. cv_2026.pdf"},
+                "folder": {"type": "string", "description": "Sub-folder name, e.g. Documents"},
+            },
+            "required": ["filename", "folder"],
+        },
+    },
+]
+
+
+def run_tool(name, args):
+    if name == "list_files":
+        return list_files()
+    if name == "move_file":
+        return move_file(args["filename"], args["folder"])
+    return f"Error: unknown tool {name}"
+
+
+# ---------- 3. THE GOAL ----------
+GOAL = (
+    "Clean up my Downloads folder. Put every file into one of these folders: "
+    "Images, Documents, Audio, Videos, Other. "
+    "Check that no loose file is left, then tell me what you did in 3 short lines."
+)
+
+
+# ---------- 4. THE LOOP (think -> act -> see, until done) ----------
+def run_agent():
+    client = anthropic.Anthropic()   # reads ANTHROPIC_API_KEY
+    messages = [{"role": "user", "content": GOAL}]
+
+    for round_number in range(1, MAX_ROUNDS + 1):
+        print(f"\n--- Round {round_number} ---")
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=16000,
+            thinking={"type": "adaptive", "display": "summarized"},
+            tools=TOOLS,
+            messages=messages,
+        )
+        messages.append({"role": "assistant", "content": response.content})
+
+        tool_results = []
+        for block in response.content:
+            if block.type == "thinking" and block.thinking:
+                print(f"[THINK] {block.thinking}")
+            elif block.type == "text":
+                print(f"[AGENT] {block.text}")
+            elif block.type == "tool_use":
+                print(f"[ACT]   {block.name}({block.input})")
+                result = run_tool(block.name, block.input)
+                print(f"[SEE]   {result}")
+                tool_results.append(
+                    {"type": "tool_result", "tool_use_id": block.id, "content": result}
+                )
+
+        if response.stop_reason != "tool_use":   # no tool asked = job finished
+            print(f"\nStopped after {round_number} rounds. Reason: {response.stop_reason}")
+            return
+        messages.append({"role": "user", "content": tool_results})
+
+    print(f"\nSafety stop: {MAX_ROUNDS} rounds reached.")
+
+
+# ---------- 5. DEMO FOLDER + START ----------
+DEMO_FILES = [
+    "beirut_sunset.jpg", "screenshot_0412.png", "cv_2026.pdf",
+    "lecture_3_notes.docx", "budget_november.xlsx", "manakish_recipe.txt",
+    "fairuz_live.mp3", "voice_note.m4a", "graduation_speech.mp4", "project_backup.zip",
+]
+
+
+def make_demo_folder():
+    """First run only: create a messy folder with 10 empty demo files."""
+    if os.path.exists(FOLDER):
+        return
+    os.makedirs(FOLDER)
+    for name in DEMO_FILES:
+        open(os.path.join(FOLDER, name), "w").close()
+
+
+if __name__ == "__main__":
+    make_demo_folder()
+    run_agent()
+</script>
+<script>
+(function () {
+  "use strict";
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+  /* ---------- copy helpers ---------- */
+  function copyText(text, btn) {
+    var label = btn.textContent;
+    function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = label; }, 1600); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done("Copied"); }, function () { done("Select + Ctrl+C"); });
+    } else { done("Select + Ctrl+C"); }
+  }
+  document.querySelectorAll(".cmd .copy").forEach(function (b) {
+    b.addEventListener("click", function () { copyText(b.parentNode.querySelector("code").textContent, b); });
+  });
+
+  /* ---------- code section ---------- */
+  var src = document.getElementById("agent-src").textContent.replace(/^\n/, "");
+  document.getElementById("copy-all").addEventListener("click", function (e) { copyText(src, e.currentTarget); });
+
+  var KW = /^(def|return|for|in|if|elif|else|import|not|and|or|None|True|False|while|with|as)$/;
+  function highlight(code) {
+    var re = /("""[\s\S]*?"""|f?"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|#[^\n]*|\b[A-Za-z_][A-Za-z0-9_]*\b|\b\d+\b)/g;
+    var out = "", last = 0, m;
+    while ((m = re.exec(code))) {
+      out += esc(code.slice(last, m.index));
+      var t = m[0], c = null;
+      if (t[0] === "#") c = "c";
+      else if (t[0] === '"' || t[0] === "'" || (t[0] === "f" && t.length > 1 && (t[1] === '"' || t[1] === "'"))) c = "s";
+      else if (/^\d+$/.test(t)) c = "n";
+      else if (KW.test(t)) c = "k";
+      else if (/^(list_files|move_file|run_tool|run_agent|make_demo_folder)$/.test(t)) c = "f";
+      out += c ? '<span class="' + c + '">' + esc(t) + "</span>" : esc(t);
+      last = m.index + t.length;
+    }
+    return out + esc(code.slice(last));
+  }
+
+  var EXPLAIN = {
+    "0": ["Settings", "Which folder, which model, and a safety limit. The agent can only touch my_downloads."],
+    "1": ["The tools", "Two normal Python functions: the agent's hands. They are the only things it can do on your computer. There is no delete function, so it cannot delete anything."],
+    "2": ["The tool menu", "The model never reads your Python. It reads this menu: a name, one sentence, and the inputs it needs. Clear sentences lead to good choices. run_tool connects each name to its function."],
+    "3": ["The goal", "The job in plain English. Change this sentence and you change what the agent does. No new code needed."],
+    "4": ["The loop", "Send the conversation to the model. If it asks for tools, run them and send back the results. Repeat. When it stops asking for tools, the job is done."],
+    "5": ["Start", "The first time, this creates a messy folder with 10 empty demo files. Then the loop starts."]
+  };
+  var parts = [], cur = { id: "0", lines: [] };
+  src.split("\n").forEach(function (line) {
+    var mk = line.match(/^# -{5,} (\d)\./);
+    if (mk && mk[1] !== "0") { parts.push(cur); cur = { id: mk[1], lines: [] }; }
+    cur.lines.push(line);
+  });
+  parts.push(cur);
+  var host = document.getElementById("code-parts");
+  parts.forEach(function (p) {
+    var info = EXPLAIN[p.id];
+    var row = el("div", "cpart");
+    var exp = el("div", "cexp");
+    exp.appendChild(el("span", "num", "Part " + p.id));
+    exp.appendChild(el("h3", null, esc(info[0])));
+    exp.appendChild(el("p", null, esc(info[1])));
+    var pre = el("pre", "code");
+    pre.innerHTML = highlight(p.lines.join("\n").replace(/\n+$/, ""));
+    row.appendChild(exp); row.appendChild(pre);
+    host.appendChild(row);
+  });
+
+  /* ---------- demo ---------- */
+  var FILES = [
+    ["beirut_sunset.jpg", "Images"], ["screenshot_0412.png", "Images"], ["cv_2026.pdf", "Documents"],
+    ["lecture_3_notes.docx", "Documents"], ["budget_november.xlsx", "Documents"], ["manakish_recipe.txt", "Documents"],
+    ["fairuz_live.mp3", "Audio"], ["voice_note.m4a", "Audio"], ["graduation_speech.mp4", "Videos"], ["project_backup.zip", "Other"]
+  ];
+  var FOLDERS = ["Images", "Documents", "Audio", "Videos", "Other"];
+  var sortedNames = FILES.map(function (f) { return f[0]; }).sort();
+  var moves = FILES.map(function (f) { return 'move_file("' + f[0] + '", "' + f[1] + '")'; });
+
+  var START = "The folder is a mess: 10 files, no order. The agent has one goal, written in English. Press Next step.";
+  var STEPS = [
+    { round: 1, tag: "think", text: "I can't see the folder yet. First, I look inside.",
+      narr: "Round 1. The model reads the goal and chooses its first move. Nothing has changed on the computer yet." },
+    { round: 1, tag: "act", code: true, text: "list_files()", tools: 1, action: "scan",
+      narr: "The model asks for a tool. Our Python code runs list_files. The model never touches the files itself." },
+    { round: 1, tag: "see", code: true, text: "10 files", small: sortedNames.join("  ·  "),
+      narr: "The result goes back to the model. Now it knows exactly what is in the folder." },
+    { round: 2, tag: "think", text: "jpg, png → Images. pdf, docx, xlsx, txt → Documents. mp3, m4a → Audio. mp4 → Videos. zip → Other.",
+      narr: "Round 2. The model makes a plan from what it saw. Nobody wrote these rules in the code. The model already knows file types." },
+    { round: 2, tag: "act", code: true, text: "move_file × 10", small: moves.join("<br>"), tools: 10, action: "move",
+      narr: "Ten tool calls in one round. Each call moves one real file and creates the folder if it does not exist." },
+    { round: 2, tag: "see", code: true, text: "10 × Moved ✓  ·  0 errors",
+      narr: "Every call reports back. If a move had failed, the model would read the error and try again." },
+    { round: 3, tag: "think", text: "Did I miss a file? I check before I answer.",
+      narr: "Round 3. A good agent checks its own work, with the same tool as before." , then: { tag: "act", code: true, text: "list_files()" }, tools: 1, action: "scan" },
+    { round: 3, tag: "see", code: true, text: "(no loose files left)",
+      narr: "Nothing left. The goal is reached." },
+    { round: 4, tag: "done", text: "Done. 10 files sorted into 5 folders: 2 Images, 4 Documents, 2 Audio, 1 Video, 1 Other. Nothing was deleted.",
+      narr: "Round 4. No tool this time, so the loop ends. In the code, stop_reason is no longer \"tool_use\". That is how we know the agent has finished." }
+  ];
+
+  var $loose = document.getElementById("loose"), $folders = document.getElementById("folders"), $log = document.getElementById("log");
+  var $narr = document.getElementById("narr"), $next = document.getElementById("next"), $play = document.getElementById("play");
+  var step = 0, toolCount = 0, lastRound = 0, timer = null, fileEls = {}, folderEls = {};
+
+  function fileChip(name) {
+    var ext = name.split(".").pop().toUpperCase();
+    var d = el("div", "file");
+    d.appendChild(el("span", "ext", esc(ext)));
+    d.appendChild(el("span", "fname", esc(name)));
+    d.title = name;
+    return d;
+  }
+  function addLog(tag, text, opts) {
+    opts = opts || {};
+    var li = el("li", tag === "done" ? "done" : null);
+    li.appendChild(el("span", "tag t-" + tag, tag));
+    var msg = el("span", "msg" + (opts.code ? " code" : ""), esc(text));
+    if (opts.small) msg.appendChild(el("small", null, opts.small));
+    li.appendChild(msg);
+    $log.appendChild(li);
+  }
+  function setChips() {
+    document.getElementById("c-step").textContent = step;
+    document.getElementById("c-round").textContent = lastRound || "–";
+    document.getElementById("c-tools").textContent = toolCount;
+    var n = 0; FOLDERS.forEach(function (f) { n += folderEls[f].list.children.length; });
+    document.getElementById("c-sorted").textContent = n;
+    FOLDERS.forEach(function (f) { folderEls[f].count.textContent = folderEls[f].list.children.length; });
+  }
+
+  function build() {
+    $loose.querySelectorAll(".file").forEach(function (n) { n.remove(); });
+    $loose.classList.remove("done", "scan");
+    $folders.innerHTML = ""; $log.innerHTML = "";
+    fileEls = {}; folderEls = {};
+    FILES.forEach(function (f) { var c = fileChip(f[0]); fileEls[f[0]] = c; $loose.appendChild(c); });
+    FOLDERS.forEach(function (name) {
+      var box = el("div", "folder"), head = el("div", "fhead");
+      head.appendChild(el("span", null, esc(name)));
+      var count = el("span", "count", "0"); head.appendChild(count);
+      var list = el("div", "flist");
+      box.appendChild(head); box.appendChild(list); $folders.appendChild(box);
+      folderEls[name] = { box: box, list: list, count: count };
+    });
+    step = 0; toolCount = 0; lastRound = 0;
+    addLog("goal", "Clean up my Downloads folder. Put every file into one of these folders: Images, Documents, Audio, Videos, Other. Check that no loose file is left.");
+    $narr.textContent = START;
+    setChips(); syncButtons();
+  }
+
+  function moveAll(animate) {
+    var firsts = FILES.map(function (f) { return fileEls[f[0]].getBoundingClientRect(); });
+    FILES.forEach(function (f) { folderEls[f[1]].box.classList.add("on"); folderEls[f[1]].list.appendChild(fileEls[f[0]]); });
+    $loose.classList.add("done");
+    if (!animate || reduced || !Element.prototype.animate) return;
+    FILES.forEach(function (f, i) {
+      var node = fileEls[f[0]], last = node.getBoundingClientRect();
+      var dx = firsts[i].left - last.left, dy = firsts[i].top - last.top;
+      node.animate([{ transform: "translate(" + dx + "px," + dy + "px)" }, { transform: "none" }],
+        { duration: 560, delay: i * 120, easing: "cubic-bezier(.2,.75,.2,1)", fill: "backwards" });
+    });
+  }
+
+  function apply(i, animate) {
+    var s = STEPS[i];
+    if (s.round !== lastRound) { $log.appendChild(el("li", "round", "Round " + s.round)); lastRound = s.round; }
+    addLog(s.tag, s.text, { code: s.code, small: s.small });
+    if (s.then) addLog(s.then.tag, s.then.text, { code: s.then.code });
+    if (s.tools) toolCount += s.tools;
+    if (s.action === "scan" && animate && !reduced) {
+      $loose.classList.remove("scan"); void $loose.offsetWidth; $loose.classList.add("scan");
+    }
+    if (s.action === "move") moveAll(animate);
+    $narr.textContent = s.narr;
+    step = i + 1;
+    setChips();
+    $log.scrollTop = $log.scrollHeight;
+  }
+
+  function next() { if (step < STEPS.length) { apply(step, true); } syncButtons(); }
+  function syncButtons() {
+    $next.disabled = step >= STEPS.length;
+    $next.textContent = step >= STEPS.length ? "Finished" : (step === 0 ? "Start the agent →" : "Next step →");
+    if (step >= STEPS.length) stopPlay();
+  }
+  function stopPlay() { if (timer) { clearInterval(timer); timer = null; } $play.textContent = "Play all"; }
+  function togglePlay() {
+    if (timer) { stopPlay(); return; }
+    if (step >= STEPS.length) build();
+    $play.textContent = "Pause";
+    next();
+    timer = setInterval(next, 2600);
+  }
+
+  $next.addEventListener("click", function () { stopPlay(); next(); });
+  $play.addEventListener("click", togglePlay);
+  document.getElementById("reset").addEventListener("click", function () { stopPlay(); build(); });
+  document.addEventListener("keydown", function (e) {
+    var a = document.activeElement, tag = a && a.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "PRE" || e.metaKey || e.ctrlKey || e.altKey) return;
+    var r = document.getElementById("demo").getBoundingClientRect();
+    if (r.bottom < window.innerHeight * 0.35 || r.top > window.innerHeight * 0.65) return;
+    if (e.key === "ArrowRight") { e.preventDefault(); stopPlay(); next(); }
+    else if (e.key === "r" || e.key === "R") { stopPlay(); build(); }
+  });
+
+  /* ---------- daily agents ---------- */
+  var EXAMPLES = [
+    { name: "Tidy (today's demo)", trig: "Button", when: "you run python agent.py",
+      goal: "Put every file of my Downloads folder into Images, Documents, Audio, Videos or Other.",
+      done: "no loose file is left", reads: ["list_files"], changes: ["move_file"],
+      ok: "Nothing to approve: it only moves files and has no delete tool.", lands: "Sub-folders inside my_downloads" },
+    { name: "Inbox sorter", trig: "Event", when: "a new email arrives",
+      goal: "Label each new email Urgent, University or Later. For urgent ones, write a reply draft.",
+      done: "every new email has a label", reads: ["read_email"], changes: ["add_label", "save_draft"],
+      ok: "Sending. It writes drafts; you read them and press Send yourself.", lands: "Labels and drafts in your Gmail" },
+    { name: "Study planner", trig: "Schedule", when: "every Sunday at 20:00",
+      goal: "Read next week's deadlines and exams. Block two study hours before each one, at times when I am free.",
+      done: "each deadline has two study blocks before it", reads: ["read_calendar", "read_course_page"], changes: ["create_event"],
+      ok: "Nothing: it only adds events and has no tool to delete yours.", lands: "Your Google Calendar" },
+    { name: "Budget keeper", trig: "Message", when: "you send a photo of a receipt",
+      goal: "Read the receipt. If the price is in LBP, convert it to USD with today's rate. Add one line to my budget sheet. Warn me if I pass my monthly limit.",
+      done: "the new line is in the sheet", reads: ["read_receipt", "get_rate"], changes: ["add_row", "send_message"],
+      ok: "Choosing the rate source and the monthly limit. You set them once.", lands: "A new row in your sheet, plus a message if you overspend" },
+    { name: "Internship hunter", trig: "Schedule", when: "every morning at 8:00",
+      goal: "Find new internships in Lebanon that match my CV. Save the 5 best with the link and one line on why they fit.",
+      done: "5 offers are saved with a link and a reason", reads: ["read_cv", "search_web", "read_page"], changes: ["add_row"],
+      ok: "Applying. It builds the shortlist; you apply yourself.", lands: "A shortlist sheet, ready at breakfast" },
+    { name: "Group-project chaser", trig: "Schedule", when: "every Thursday at 18:00",
+      goal: "Check our shared task list. For each late task, write a polite reminder to the teammate who owns it.",
+      done: "every late task has a reminder", reads: ["read_tasks"], changes: ["send_message"],
+      ok: "Sending, at first. It shows you each reminder and you approve it.", lands: "Reminders on Telegram" }
+  ];
+  var $picker = document.getElementById("picker"), $spec = document.getElementById("spec");
+  function chips(arr, cls) { return arr.map(function (x) { return '<span class="tool ' + cls + '">' + esc(x) + "</span>"; }).join(""); }
+  function row(k, v) { return "<div><dt>" + k + "</dt><dd>" + v + "</dd></div>"; }
+  function showExample(i) {
+    var x = EXAMPLES[i];
+    $picker.querySelectorAll(".pick").forEach(function (b, j) { b.setAttribute("aria-pressed", String(i === j)); });
+    var snippet = "# starts when: " + x.when + "\n" +
+      "GOAL = " + JSON.stringify(x.goal) + "\n\n" +
+      "# tools to write, then describe in TOOLS:\n" +
+      "#   reads:   " + x.reads.join(", ") + "\n" +
+      "#   changes: " + x.changes.join(", ") + "\n\n" +
+      "run_agent()   # the loop from agent.py, unchanged";
+    $spec.innerHTML =
+      '<div class="spec-head"><h3>' + esc(x.name) + '</h3><span class="tchip">' + esc(x.trig) + "</span></div>" +
+      '<dl class="rows">' + row("Starts when", esc(x.when)) + row("Goal", esc(x.goal)) +
+      row("Reads", chips(x.reads, "r")) + row("Changes", chips(x.changes, "w")) +
+      row("Needs your OK", esc(x.ok)) + row("Result lands in", esc(x.lands)) + "</dl>" +
+      '<pre class="code wrapc">' + highlight(snippet) + "</pre>" +
+      '<div class="spec-foot"><span class="legend"><span class="tool r">reads</span> only looks · <span class="tool w">changes</span> acts on your things</span>' +
+      '<button class="btn" type="button" id="use-ex">Use it in the design card ↓</button></div>';
+    document.getElementById("use-ex").addEventListener("click", function () {
+      fillCanvas(x);
+      document.getElementById("your-turn").scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+    });
+  }
+  EXAMPLES.forEach(function (x, i) {
+    var b = el("button", "pick", "<b>" + esc(x.name) + "</b><span>" + esc(x.trig.toLowerCase() + " · " + x.when) + "</span>");
+    b.type = "button";
+    b.addEventListener("click", function () { showExample(i); });
+    $picker.appendChild(b);
+  });
+
+  /* ---------- agent, script or chatbot ---------- */
+  var answers = [true, true, true, true];
+  var PRESETS = [
+    ["Sort my emails every day", [1, 1, 1, 1]],
+    ["Pay my phone bill each month", [1, 1, 1, 0]],
+    ["Rename 500 photos by date", [1, 0, 1, 1]],
+    ["Plan one weekend in Byblos", [0, 1, 1, 1]],
+    ["Pay the generator subscription in cash", [1, 0, 0, 0]],
+    ["Tidy, our demo", [1, 0, 1, 1]]
+  ];
+  var VERDICTS = {
+    build: ["Build the agent", "It repeats, it needs judgment, it has tools, and a mistake is cheap to fix. Good fit."],
+    approve: ["The agent prepares, you approve", "Build it, but keep the risky step for a human. The agent gets everything ready; you confirm anything that sends, pays or deletes."],
+    script: ["A simple script is enough", "Fixed rules don't need AI. A short script or an automation is cheaper and gives the same result every time."],
+    chat: ["Ask a chatbot once", "It happens one time. Ask, read the answer, do it yourself. An agent is worth building when the job comes back."],
+    notyet: ["Not possible yet", "The agent has no way in. Without a tool (an app, an API, a file) it can only give advice."]
+  };
+  var $verdict = document.getElementById("verdict"), $presets = document.getElementById("presets");
+  function decide() {
+    var a = answers;
+    var v = !a[2] ? "notyet" : !a[1] ? "script" : !a[0] ? "chat" : !a[3] ? "approve" : "build";
+    document.querySelectorAll(".yn").forEach(function (g) {
+      var q = +g.getAttribute("data-q"), bs = g.querySelectorAll("button");
+      bs[0].setAttribute("aria-pressed", String(answers[q]));
+      bs[1].setAttribute("aria-pressed", String(!answers[q]));
+    });
+    $verdict.className = "vcard2 v-" + v;
+    $verdict.innerHTML = '<span class="zone-label">Verdict</span><h3>' + esc(VERDICTS[v][0]) + "</h3><p>" + esc(VERDICTS[v][1]) + "</p>";
+  }
+  function pressPreset(i) {
+    $presets.querySelectorAll(".preset").forEach(function (b, j) { b.setAttribute("aria-pressed", String(i === j)); });
+  }
+  PRESETS.forEach(function (p, i) {
+    var b = el("button", "preset", esc(p[0]));
+    b.type = "button";
+    b.addEventListener("click", function () { answers = p[1].map(Boolean); pressPreset(i); decide(); });
+    $presets.appendChild(b);
+  });
+  document.querySelectorAll(".yn").forEach(function (g) {
+    var q = +g.getAttribute("data-q"), bs = g.querySelectorAll("button");
+    bs[0].addEventListener("click", function () { answers[q] = true; pressPreset(-1); decide(); });
+    bs[1].addEventListener("click", function () { answers[q] = false; pressPreset(-1); decide(); });
+  });
+
+  /* ---------- design card ---------- */
+  var FIELDS = ["name", "trig", "when", "goal", "done", "reads", "changes", "ok", "lands"];
+  var $f = {};
+  FIELDS.forEach(function (k) { $f[k] = document.getElementById("f-" + k); });
+  var $skel = document.getElementById("skel"), STORE = "agent-design-card-v1";
+  function oneLine(s) { return String(s || "").replace(/\s+/g, " ").trim(); }
+  function ident(s) {
+    s = oneLine(s).toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    return s && /^[0-9]/.test(s) ? "tool_" + s : s;
+  }
+  function toolList(s) { return String(s || "").split(",").map(ident).filter(Boolean); }
+  function skeleton() {
+    var v = {};
+    FIELDS.forEach(function (k) { v[k] = oneLine($f[k].value); });
+    var start = {
+      Message: "Start it from a chat bot (Telegram, for example) when: ",
+      Schedule: "Start it with cron (Mac, Linux) or Task Scheduler (Windows): ",
+      Event: "Start it when this happens (check every few minutes): ",
+      Button: "Start it yourself with python agent.py: "
+    }[v.trig] || "Start it: ";
+    var goal = (v.goal || "Describe the job in one or two sentences.") +
+      (v.done ? " You are done when " + v.done.replace(/[.\s]+$/, "") + "." : "");
+    var reads = toolList(v.reads), changes = toolList(v.changes), L = [];
+    L.push("# Agent: " + (v.name || "My agent"));
+    L.push("# " + start + (v.when || "..."));
+    L.push("# Result lands in: " + (v.lands || "..."));
+    L.push("# Needs my OK before: " + (v.ok || "..."));
+    L.push("", "GOAL = " + JSON.stringify(goal), "");
+    L.push("# READ tools: they only look, so they are safe.");
+    (reads.length ? reads : ["read_something"]).forEach(function (t) {
+      L.push("def " + t + "():", '    """TODO: the inputs it needs, and what it returns."""', '    return "..."', "");
+    });
+    L.push("# ACT tools: they change things. Keep them few and fenced.");
+    (changes.length ? changes : ["do_something"]).forEach(function (t) {
+      L.push("def " + t + "():", '    """TODO: what it changes. Refuse anything outside its fence."""', '    return "Done"', "");
+    });
+    L.push("# Next: describe each tool in TOOLS, connect it in run_tool(),");
+    L.push("# then call run_agent() from agent.py. The loop does not change.");
+    return L.join("\n");
+  }
+  function renderSkel(save) {
+    $skel.innerHTML = highlight(skeleton());
+    if (save) {
+      try {
+        var data = {};
+        FIELDS.forEach(function (k) { data[k] = $f[k].value; });
+        localStorage.setItem(STORE, JSON.stringify(data));
+      } catch (e) { /* storage unavailable: the card still works */ }
+    }
+  }
+  function fillCanvas(x) {
+    FIELDS.forEach(function (k) { var val = x[k]; $f[k].value = Array.isArray(val) ? val.join(", ") : (val || ""); });
+    if (!$f.trig.value) $f.trig.value = "Message";
+    renderSkel(true);
+  }
+  document.getElementById("cform").addEventListener("input", function () { renderSkel(true); });
+  document.getElementById("cform").addEventListener("submit", function (e) { e.preventDefault(); });
+  document.getElementById("f-example").addEventListener("click", function () { fillCanvas(EXAMPLES[3]); });
+  document.getElementById("f-clear").addEventListener("click", function () {
+    FIELDS.forEach(function (k) { if (k !== "trig") $f[k].value = ""; });
+    renderSkel(true);
+    $f.name.focus();
+  });
+  document.getElementById("f-copy").addEventListener("click", function (e) { copyText(skeleton(), e.currentTarget); });
+
+  showExample(1);
+  answers = PRESETS[0][1].map(Boolean); pressPreset(0); decide();
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE) || "null"); } catch (e) { saved = null; }
+  fillCanvas(saved || EXAMPLES[3]);
+
+  build();
+})();
+</script>
+</body>
+</html>
